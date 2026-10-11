@@ -51,6 +51,14 @@ function exitState(exit, status) {
 }
 function State({ value }) { return <span className={`state ${value[1]}`}><span className="dot" />{value[0]}</span>; }
 
+function SubscriptionUsage({ health }) {
+  const usage = health?.usage;
+  if (!usage) return null;
+  const size = bytes => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  const expiry = usage.expire > 0 && usage.expire <= 253402300799 ? new Date(usage.expire * 1000).toLocaleDateString("zh-CN") : null;
+  return <div className="subscription-usage"><span>基础订阅 · 已用 {size(usage.used)} / {size(usage.total)} · 剩余 {size(usage.remaining)}</span>{expiry && <span>到期 {expiry}</span>}{health.lastRefreshOk === false && <span>最近一次数据</span>}<progress aria-label="基础订阅流量使用比例" max={usage.total || 1} value={Math.min(usage.used, usage.total || 1)} /></div>;
+}
+
 function App() {
   const [doc, setDoc] = useState(null), [saved, setSaved] = useState(null), [etag, setEtag] = useState(null);
   const [defaults, setDefaults] = useState(null), [profiles, setProfiles] = useState([]);
@@ -236,6 +244,7 @@ function App() {
         {view === "overview" && <>
           <section className="plan-summary"><div><span className="overline">默认订阅</span><strong>{plan.subscription.url ? "自定义订阅" : plan.subscription.profileName}</strong><button className="text-action" onClick={() => openEditor("source")}>编辑来源</button><p><State value={health?.status === "ok" ? [health.stale ? "使用备用配置" : "已更新", health.stale ? "amber" : "green"] : [persisted ? "等待订阅" : "尚未保存", "neutral"]} />{health?.lastRefreshAt && <span> · {new Date(health.lastRefreshAt).toLocaleTimeString("zh-CN")}</span>}</p></div><div><span className="overline">出口扩展</span><strong>{enabled.length} 个启用 / {plan.exits.length} 个出口</strong><p>{plan.exits.length ? [...new Set(plan.exits.map(e => TYPES[e.type]))].join(" · ") : "暂无扩展出口"}</p></div><div><span className="overline">路由范围</span><strong>{count} 个域名</strong><p>其余流量遵循默认订阅</p></div></section>
           {persisted && health && (health.status !== "ok" || health.stale) && <div className="issue"><AlertCircle size={17} /><div><strong>默认订阅需要处理</strong><span>{health.stale ? "正在使用备用配置，请检查订阅来源。" : "订阅获取失败，请检查地址或刷新重试。"}</span></div><Button variant="ghost" size="sm" disabled={dirty || refreshing} onClick={refresh}>刷新订阅</Button></div>}
+          <SubscriptionUsage health={health} />
           <div className="section-heading bench-heading"><h2>出口</h2><span>按优先级排序</span></div>
           <section className="workbench"><div className="exit-list">{plan.exits.length > 8 && <div className="exit-filters"><Input aria-label="搜索出口或域名" placeholder="搜索出口或域名" value={exitSearch} onChange={e => setExitSearch(e.target.value)} /><Choice label="出口状态筛选" value={stateFilter} onChange={setStateFilter} options={[["all", "全部出口"], ["enabled", "启用"], ["disabled", "停用"]]} /></div>}<div className="exit-list-scroll">{visibleExits.map(item => <button key={item.id} className={`exit-item ${item.id === exitId ? "selected" : ""}`} onClick={() => chooseExit(item.id)}><div><strong>{item.name}</strong><span>{String(plan.exits.indexOf(item) + 1).padStart(2, "0")}</span></div><p>{TYPES[item.type]} · {item.server}:{item.port}</p><State value={exitState(item, statuses[item.id])} /><small>{item.domains.length} 个域名</small></button>)}{!!plan.exits.length && !visibleExits.length && <div className="empty compact">没有匹配的出口</div>}</div></div><div className="inspector">{exit ? <><div className="inspect-heading"><div><h2>{exit.name}</h2><p>{TYPES[exit.type]} · {exit.server}:{exit.port}</p></div><div className="button-group"><State value={exitState(exit, status)} />{exit.type === "ssh" && <Button variant="outline" size="sm" disabled={working || (status?.managed ? false : !!startReason || !persisted || locked)} onClick={() => operate(status?.managed ? "stop" : "start")}>{status?.managed ? "停止" : "启动"}</Button>}</div></div>
           {external && <div className="issue"><AlertCircle size={16} /><div><strong>端口由外部进程使用</strong><span>守护操作不可用，现有连接保持运行。</span></div><button className="text-action" onClick={() => openEditor("diagnose")}>查看详情</button></div>}

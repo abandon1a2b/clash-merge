@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const YAML = require("yaml");
 const { merge } = require("./merge");
 const { parseYaml } = require("./profiles");
+const { parseUsage } = require("./usage");
 
 function createMergeService(profiles, { fetchImpl = fetch, logger = console, settingsStore, localPort = 18790 } = {}) {
   let upstream = null;
@@ -27,6 +28,7 @@ function createMergeService(profiles, { fetchImpl = fetch, logger = console, set
       etag: `"${crypto.createHash("sha256").update(yaml).digest("hex")}"`,
       source: useUpstream ? "direct-refresh" : "clash-cache",
       generatedAt: new Date().toISOString(),
+      usage: upstream?.sourceKey === sourceKey ? upstream.usage : null,
     };
     return { ...lastGood, stale: false };
   }
@@ -78,7 +80,7 @@ function createMergeService(profiles, { fetchImpl = fetch, logger = console, set
           throw new Error("Subscription has no proxy nodes");
         }
         merge(value, company, settingsStore?.read());
-        upstream = { value, fetchedAt: Date.now(), sourceKey: JSON.stringify([internetItem.url, internetItem.option?.user_agent]) };
+        upstream = { value, usage: parseUsage(response.headers.get("subscription-userinfo")), fetchedAt: Date.now(), sourceKey: JSON.stringify([internetItem.url, internetItem.option?.user_agent]) };
         lastRefreshOk = true;
         lastRefreshAt = new Date().toISOString();
         logger.log(`MySSR refresh succeeded at ${lastRefreshAt}`);
@@ -108,6 +110,7 @@ function createMergeService(profiles, { fetchImpl = fetch, logger = console, set
       stale: config?.stale ?? true,
       lastRefreshAt,
       lastRefreshOk,
+      usage: config?.usage || null,
     };
   }
 

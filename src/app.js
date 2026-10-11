@@ -80,7 +80,7 @@ function createApplicationHandler(runtime, store, profiles, { host, port }) {
         if (id && !store.read().plans.some(plan => plan.id === id)) { json(404, { error: "方案不存在" }); return; }
         const service = runtime.service(id); await service.refresh(); const config = service.currentConfig();
         if (!config) { json(503, { error: "订阅暂不可用，请检查来源" }); return; }
-        response.writeHead(200, { "Content-Type": "application/yaml; charset=utf-8", "Cache-Control": "no-store", ETag: config.etag, "X-Config-Source": config.source, "X-Config-Stale": String(config.stale) });
+        response.writeHead(200, { "Content-Type": "application/yaml; charset=utf-8", "Cache-Control": "no-store", ETag: config.etag, "X-Config-Source": config.source, "X-Config-Stale": String(config.stale), ...(config.usage ? { "Subscription-Userinfo": config.usage.header } : {}) });
         response.end(request.method === "HEAD" ? undefined : config.yaml); return;
       }
       if (["GET", "HEAD"].includes(request.method) && (pathname === "/" || /^\/assets\/[a-zA-Z0-9_.-]+$/.test(pathname))) {

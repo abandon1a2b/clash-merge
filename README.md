@@ -23,6 +23,7 @@ Open `http://127.0.0.1:18790/`. `npm run dev` builds the React/shadcn UI and sta
 - Disconnected exits do not automatically fall back to the default subscription. Their matching routes continue targeting that exit.
 - Save workspace changes, then update the corresponding subscription in Clash Verge. Runtime start/stop operations are separate from saving configuration.
 - Generation preview and YAML download reflect saved configuration.
+- Valid upstream `Subscription-Userinfo` metadata is forwarded on GET/HEAD subscription responses and shown in the workbench (used, remaining, total and expiry). It describes the base subscription only. Failed refreshes retain the latest successful metadata; changing source clears it. Upstreams without this header show no usage information.
 
 ## SSH Guardians
 

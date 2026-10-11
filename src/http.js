@@ -121,6 +121,7 @@ function createRequestHandler(service, { host, port }, settingsStore, { profiles
       ETag: config.etag,
       "X-Config-Source": config.source,
       "X-Config-Stale": String(config.stale),
+      ...(config.usage ? { "Subscription-Userinfo": config.usage.header } : {}),
     });
     response.end(request.method === "HEAD" ? undefined : config.yaml);
   };
