@@ -3,7 +3,23 @@
 const BUILTIN_TARGETS = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS"]);
 const net = require("node:net");
 
+function validateProxyCycles(config) {
+  const graph = new Map();
+  for (const proxy of config.proxies || []) graph.set(proxy.name, proxy["dialer-proxy"] ? [proxy["dialer-proxy"]] : []);
+  for (const group of config["proxy-groups"] || []) graph.set(group.name, [...(group.proxies || []), ...(group["dialer-proxy"] ? [group["dialer-proxy"]] : [])]);
+  const visiting = new Set(), done = new Set();
+  function visit(name) {
+    if (visiting.has(name)) throw new Error("Circular proxy/group reference");
+    if (done.has(name) || !graph.has(name)) return;
+    visiting.add(name);
+    for (const next of graph.get(name)) visit(next);
+    visiting.delete(name); done.add(name);
+  }
+  for (const name of graph.keys()) visit(name);
+}
+
 function merge(internet, company, settings) {
+  validateProxyCycles(internet);
   if (!Array.isArray(internet.proxies) || !internet.proxies.length) {
     throw new Error("MySSR has no proxy nodes");
   }
@@ -50,6 +66,7 @@ function merge(internet, company, settings) {
 }
 
 function mergeExits(internet, exits) {
+  validateProxyCycles(internet);
   const merged = structuredClone(internet);
   const names = new Set([...merged.proxies.map(p => p.name), ...(merged["proxy-groups"] || []).map(g => g.name), ...BUILTIN_TARGETS]);
   const bypass = [], rules = [], proxies = [];

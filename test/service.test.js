@@ -5,6 +5,28 @@ const test = require("node:test");
 const { createMergeService } = require("../src/service");
 const YAML = require("yaml");
 
+test("redirects are checked before following, loops rejected, relative redirects supported", async () => {
+  for (const destination of ["http://localhost:18790/clash.yaml", "http://alias.example:18790/subscriptions/default/clash.yaml", "/sub", "file:///tmp/config"]) {
+    let calls = 0;
+    const service = createMergeService({ readSources: () => ({ internetItem: { url: "https://source.example/sub" } }) }, {
+      fetchImpl: async (_, options) => { calls++; assert.equal(options.redirect, "manual"); return new Response(null, { status: 302, headers: { location: destination } }); },
+      logger: { log() {}, error() {} },
+    });
+    await service.refresh();
+    assert.equal(service.lastRefreshOk, false);
+    assert.equal(calls, 1);
+  }
+  const calls = [];
+  const service = createMergeService({ readSources: () => ({ internetItem: { url: "https://source.example/sub" } }) }, {
+    settingsStore: { read: () => ({ exits: [] }) },
+    fetchImpl: async url => { calls.push(url); return calls.length === 1 ? new Response(null, { status: 307, headers: { location: "/latest" } }) : new Response(YAML.stringify({ proxies: [{ name: "node" }], rules: ["MATCH,node"] })); },
+    logger: { log() {}, error() {} },
+  });
+  await service.refresh();
+  assert.equal(service.lastRefreshOk, true);
+  assert.deepEqual(calls, ["https://source.example/sub", "https://source.example/latest"]);
+});
+
 test("self subscriptions cannot recursively fetch the merge service", async () => {
   const profiles = { readSources: () => ({ internetItem: { url: "http://127.0.0.1:18790/clash.yaml" }, company: null }) };
   const service = createMergeService(profiles, {

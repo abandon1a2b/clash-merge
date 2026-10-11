@@ -4,6 +4,18 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { merge } = require("../src/merge");
 
+test("reject self, indirect and dialer proxy cycles while allowing shared acyclic groups", () => {
+  const config = groups => ({ proxies: [{ name: "node" }], rules: ["MATCH,DIRECT"], "proxy-groups": groups });
+  for (const groups of [[{ name: "A", proxies: ["A"] }], [{ name: "A", proxies: ["B"] }, { name: "B", proxies: ["A"] }]]) {
+    assert.throws(() => merge(config(groups), null, { exits: [] }), /Circular/);
+    assert.throws(() => merge(config(groups), null, { company: { enabled: false } }), /Circular/);
+  }
+  const dialer = config([{ name: "A", proxies: ["node"] }]);
+  dialer.proxies[0]["dialer-proxy"] = "A";
+  assert.throws(() => merge(dialer, null, { exits: [] }), /Circular/);
+  assert.doesNotThrow(() => merge(config([{ name: "A", proxies: ["node", "DIRECT"] }, { name: "B", proxies: ["A", "node"] }]), null, { exits: [] }));
+});
+
 test("legacy merge preserves explicit company rules without injecting personal domains", () => {
   const internet = {
     proxies: [{ name: "Internet" }],

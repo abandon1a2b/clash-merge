@@ -47,18 +47,27 @@ function createMergeService(profiles, { fetchImpl = fetch, logger = console, set
         if (typeof internetItem.url !== "string") {
           throw new Error("MySSR subscription URL is missing");
         }
-        const subscriptionUrl = new URL(internetItem.url);
-        if (["127.0.0.1", "localhost", "[::1]"].includes(subscriptionUrl.hostname) && Number(subscriptionUrl.port || 80) === localPort) {
-          throw new Error("The merge service cannot subscribe to itself");
-        }
         const headers = { "Cache-Control": "no-cache", "User-Agent": "clash-verge" };
         if (internetItem.option?.user_agent) {
           headers["User-Agent"] = internetItem.option.user_agent;
         }
-        const response = await fetchImpl(internetItem.url, {
-          headers,
-          signal: AbortSignal.timeout(15000),
-        });
+        let target = new URL(internetItem.url), response;
+        const visited = new Set(), signal = AbortSignal.timeout(15000);
+        for (let hop = 0; ; hop++) {
+          // This service is local-only; no legitimate upstream needs its port.
+          if (!["http:", "https:"].includes(target.protocol) || target.username || target.password || Number(target.port || (target.protocol === "https:" ? 443 : 80)) === localPort) {
+            throw new Error("Invalid or recursive subscription destination");
+          }
+          target.hash = "";
+          if (visited.has(target.href) || hop > 5) throw new Error("Subscription redirect loop or limit exceeded");
+          visited.add(target.href);
+          response = await fetchImpl(target.href, { headers, signal, redirect: "manual" });
+          if (![301, 302, 303, 307, 308].includes(response.status)) break;
+          const location = response.headers.get("location");
+          await response.body?.cancel();
+          if (!location) throw new Error("Missing redirect destination");
+          target = new URL(location, target);
+        }
         if (!response.ok) throw new Error(`Upstream HTTP ${response.status}`);
         const length = Number(response.headers.get("content-length"));
         if (length > 10_000_000) throw new Error("Subscription exceeds size limit");

@@ -19,6 +19,7 @@ Open `http://127.0.0.1:18790/`. `npm run dev` builds the React/shadcn UI and sta
 - Add SSH, SOCKS5 or HTTP exits. Each exit has a stable ID, editable name, enable switch and domain suffix list. SOCKS5 and HTTP exits support optional authentication.
 - Exit order determines domain rule priority. Exact duplicate domains across enabled exits are rejected; overlapping suffixes follow the configured order.
 - Relay, proxy-server and loopback bypass rules precede exit domain rules. Remaining traffic uses the original subscription's rules. Its DNS, TUN, groups and network settings are preserved.
+- Subscription redirects are followed manually (at most five), with each destination checked before fetching. HTTP(S) destinations using this service's port are rejected, including hostname aliases; use a different port for legitimate upstream services. Proxy/group references and `dialer-proxy` cycles are rejected before generating output. Dynamically loaded provider contents are outside this static cycle check.
 - Disconnected exits do not automatically fall back to the default subscription. Their matching routes continue targeting that exit.
 - Save workspace changes, then update the corresponding subscription in Clash Verge. Runtime start/stop operations are separate from saving configuration.
 - Generation preview and YAML download reflect saved configuration.
