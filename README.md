@@ -69,4 +69,3 @@ Settings live in `data/settings.json` with owner-only permissions. The UI uses r
 配置修改使用完整文档 `PUT /api/settings`，应携带读取时的 `ETag` 作为 `If-Match`，避免覆盖其他修改。文档说明多方案、出口、域名优先级、守护操作及客户端更新订阅的流程，不包含实际配置或凭据。
 
 服务绑定 `127.0.0.1`，请求还必须来自实际回环地址并通过 Host 检查；写操作检查 Origin。所有接口均限定本机，转发请求头不能绕过来源检查。
-
