@@ -108,6 +108,10 @@ function createTunnelManager(settingsStore, { spawnImpl = spawn, probe = isListe
     if (busy || desired) return;
     busy = true;
     try {
+      const c = config();
+      if (await probe(c.relayPort) || await probe(c.socksPort)) {
+        state = "external"; log("Local port is occupied; existing processes were left untouched"); return;
+      }
       fs.accessSync(config().keyFile, fs.constants.R_OK);
       desired = true;
       await connect(++generation);

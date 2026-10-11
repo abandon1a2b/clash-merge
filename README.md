@@ -33,7 +33,7 @@ Start, stop and reconnect individual guardians from the exit inspector. Guardian
 
 Only processes launched by this service are stopped. Existing external tunnels are detected and left untouched. Stop a managed exit before changing its tunnel, disabling it or deleting it. Enabled SSH exits must use distinct local ports across all plans. Known-host verification stays strict; configure SSH trust separately before starting. Private keys are never uploaded or copied.
 
-Guardians do not auto-start after service restart. Other exits and subscription generation continue independently. The original `company-socks-client.sh` can still be used as an external provider; it must not run alongside a managed exit using the same ports.
+Enabled SSH guardians start after service restart. Occupied local ports are left to external processes; disable an exit to prevent automatic startup. Other exits and subscription generation continue independently.
 
 ## Migration And Storage
 

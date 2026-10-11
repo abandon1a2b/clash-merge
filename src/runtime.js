@@ -74,7 +74,10 @@ function createRuntime(store, profiles, config, options = {}) {
     await Promise.all(store.read().plans.map(plan => service(plan.id).refresh()));
   }
   async function stopAll() { await Promise.all([...tunnels.values()].map(manager => manager.stop())); }
-  return { getPlan, service, save, statuses, action, refreshAll, stopAll };
+  async function startEnabled() {
+    await Promise.all(store.read().plans.flatMap(plan => plan.exits.filter(exit => exit.enabled && exit.type === "ssh").map(exit => tunnel(plan.id, exit.id).start())));
+  }
+  return { getPlan, service, save, statuses, action, refreshAll, stopAll, startEnabled };
 }
 
 module.exports = { createRuntime };

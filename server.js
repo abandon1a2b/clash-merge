@@ -19,6 +19,7 @@ const server = http.createServer(createApplicationHandler(runtime, settingsStore
 server.listen(config.port, config.host, () => {
   console.log(`Clash merge service listening on http://${config.host}:${config.port}/clash.yaml`);
   void runtime.refreshAll();
+  void runtime.startEnabled();
 });
 
 const timer = setInterval(() => void runtime.refreshAll().catch(() => console.error("Scheduled refresh failed")), config.refreshMinutes * 60_000);
